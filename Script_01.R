@@ -3,7 +3,7 @@
 # Pilotto et al. Meta-analysis of multidecadal biodiversity trends in Europe. Nature Communications
 #
 # This script includes the code for the following steps:
-#    (1) compute the four studied biodiversity metrics (abundance, taxonomic richness, Simpson diversity and taxonomic turnover) for each time series and each studied year, 
+#    (1) compute the four studied biodiversity metrics (abundance, taxonomic richness, Simpson diversity and taxonomic turnover) for each time series and each studied year,
 #    (2) compute the monotonic trends of the four biodiversity metrics over the surveyed period,
 #    (3) when necessary, combine the effect sizes of multiple time series for a given taxonomic group at the same site, with the same time span
 #    (4) extract climatic data for the site,
@@ -12,12 +12,12 @@
 #    (7) export the results
 #
 # This script must be run for each time series.
-# The input data file is a table (in .csv format) with the following columns: 
-# Site = site name, TimeSeries_id = unique identifier for the time series, Year = survey year, Taxon = taxon name, Density = total density or biomass or number of individual of that taxon for that year. 
+# The input data file is a table (in .csv format) with the following columns:
+# Site = site name, TimeSeries_id = unique identifier for the time series, Year = survey year, Taxon = taxon name, Density = total density or biomass or number of individual of that taxon for that year.
 #
 ########################################################################################################################################################################
 
-# Load libraries: 
+# Load libraries:
 
 library(vegan)
 library(codyn)
@@ -28,7 +28,17 @@ library(sp)
 library(raster)
 library(ncdf4)
 library(rgdal)
-source("My_mmkh.R", local=T) # see function folder
+library(readxl)
+library(tidyverse)
+source("functions/My_mmkh.R", local=T) # see function folder
+
+
+## Load the list of dataset and filter the birds
+data_url <- read_xlsx("data/41467_2020_17171_MOESM4_ESM.xlsx")
+data_url <- data_url[data_url$`Taxonomic group` == "Birds",]
+
+## Extract the dataset:
+
 
 # Read data:
 
@@ -41,14 +51,14 @@ DATA1 <- dcast(DATA1_list, Year ~ Taxon, sum, value.var = "Density") # create cr
 lastTaxon <- length(DATA1)
 firstTaxon <- 2
 
-DATA1_Taxa <- subset(DATA1[,c(firstTaxon:lastTaxon)]) 
+DATA1_Taxa <- subset(DATA1[,c(firstTaxon:lastTaxon)])
 DATA1$NTaxa <- specnumber(DATA1_Taxa)  # taxonomic richness
 DATA1$Simp <- diversity(DATA1_Taxa, index = "simpson") # Simpson´s taxonomic diversity
 DATA1$Abund <- rowSums (DATA1_Taxa) # Total abundance
 DATA1_Turnover <- turnover(DATA1_list, time.var = "Year", species.var = "Taxon", abundance.var = "Density" , metric = "total")
 DATA1$Turnover <- c(0, DATA1_Turnover$total) # Turnover
 
-# Prepare data for next steps: 
+# Prepare data for next steps:
 
 start.year <- min(DATA1$Year) # set the starting year of the time series
 end.year <- max(DATA1$Year) # set the end year of the time series
@@ -82,24 +92,24 @@ acf(DATA1.Turnover, na.action = na.pass) # check if there is temporal autocorrel
 pacf(DATA1.Turnover, na.action = na.pass) # check if there is temporal autocorrelation
 DATA1.trend.Turnover <- My.mmkh(DATA1$Turnover[-1]) # Modified Mann-Kendall Test For Serially Correlated Data Using Hamed and Rao (1998) Variance Correction Approach
 
-# Combine results in a data frame: 
+# Combine results in a data frame:
 
-EffectSizes_biodiv_DATA1 <- data.frame(TimeSeries = "DATA1", Site = "RMO", Country = "DE", Lat = 50.187,	Lon = 9.100,	Alt = 122, # fill in with site information 
+EffectSizes_biodiv_DATA1 <- data.frame(TimeSeries = "DATA1", Site = "RMO", Country = "DE", Lat = 50.187,	Lon = 9.100,	Alt = 122, # fill in with site information
                               TaxonomicGroup = "AquaticInv", Realm = "FW", Naturalness = 3, startYear = start.year, endYear = end.year,    # fill in with site information
-                              NTaxa_S = DATA1.trend.NTaxa[10], 
+                              NTaxa_S = DATA1.trend.NTaxa[10],
                               NTaxa_var = DATA1.trend.NTaxa[8], # if there is no temporal autocorrelation choose: [8]; if there is temporal autocorrelation choose [9]
-                              Abund_S = DATA1.trend.Abund[10], 
+                              Abund_S = DATA1.trend.Abund[10],
                               Abund_var = DATA1.trend.Abund[8],  # if there is no temporal autocorrelation choose: [8]; if there is temporal autocorrelation choose [9]
-                              Simp_S = DATA1.trend.Simp[10],  
+                              Simp_S = DATA1.trend.Simp[10],
                               Simp_var = DATA1.trend.Simp[9],  # if there is no temporal autocorrelation choose: [8]; if there is temporal autocorrelation choose [9]
-                              Turn_S = DATA1.trend.Turnover[10],  
+                              Turn_S = DATA1.trend.Turnover[10],
                               Turn_var = DATA1.trend.Turnover[8])  # if there is no temporal autocorrelation choose: [8]; if there is temporal autocorrelation choose [9]
 
 
 # (3) Combine replicated time series [to be run only when necessary] ---------------------------------------
 # If multiple time series are available for a given taxonomic group at the same site, with the same time span, e.g. from multiple transects or plots with multiple traps,
 # to avoid pseudoreplication, we combine those time series using meta-analysis mixed models and extract the cumulative effect sizes and their variances.
-# The script below show the procedure for combining 3 time series. 
+# The script below show the procedure for combining 3 time series.
 
 # Run the script above for each of the 3 time series to be combined, to obtain the following objects:
 EffectSizes_biodiv_DATA1
@@ -115,29 +125,29 @@ Combined.trend.Simp <- rma(Simp_S, Simp_var, data = EffectSizes_biodiv_DATA1_3)
 Combined.trend.Abund <- rma(Abund_S, Abund_var, data = EffectSizes_biodiv_DATA1_3)
 Combined.trend.Turn <- rma(Turn_S, Turn_var, data = EffectSizes_biodiv_DATA1_3)
 
-# Combine results in a data frame: 
+# Combine results in a data frame:
 
-EffectSizes_biodiv_Combined_DATA1_3 <- data.frame(TimeSeries = "Combined_DATA1_3", Site = "Site2", Country = "DE", Lat = 51.7614,	Lon = 	9.5781,	Alt = 504, # fill in with site information 
+EffectSizes_biodiv_Combined_DATA1_3 <- data.frame(TimeSeries = "Combined_DATA1_3", Site = "Site2", Country = "DE", Lat = 51.7614,	Lon = 	9.5781,	Alt = 504, # fill in with site information
                                        TaxonomicGroup = "Plants", Realm = "TE", Naturalness = 3, startYear = start.year, endYear = end.year,     # fill in with site information
-                                       NTaxa_S = Combined.trend.NTaxa$beta, 
-                                       NTaxa_var = Combined.trend.NTaxa$vb[1], 
-                                       Abund_S = Combined.trend.Abund$beta, 
-                                       Abund_var = Combined.trend.Abund$vb[1],  
-                                       Simp_S = Combined.trend.Simp$beta,  
-                                       Simp_var = Combined.trend.Simp$vb[1], 
-                                       Turn_S = Combined.trend.Turn$beta,  
-                                       Turn_var = Combined.trend.Turn$vb[1])  
+                                       NTaxa_S = Combined.trend.NTaxa$beta,
+                                       NTaxa_var = Combined.trend.NTaxa$vb[1],
+                                       Abund_S = Combined.trend.Abund$beta,
+                                       Abund_var = Combined.trend.Abund$vb[1],
+                                       Simp_S = Combined.trend.Simp$beta,
+                                       Simp_var = Combined.trend.Simp$vb[1],
+                                       Turn_S = Combined.trend.Turn$beta,
+                                       Turn_var = Combined.trend.Turn$vb[1])
 
 
 # (4) Gather climatic data ----------------------------------------------------
-# To run the following code, it is necessary to download the daily mean temperature and daily total precipitation data 
-# from the Gridded observational dataset for precipitation, temperature and sea level pressure in Europe, 
+# To run the following code, it is necessary to download the daily mean temperature and daily total precipitation data
+# from the Gridded observational dataset for precipitation, temperature and sea level pressure in Europe,
 # available at https://www.ecad.eu/download/ensembles/download.php
 
 # Set coordinates of target point:
 
-lon <- 	EffectSizes_biodiv_DATA1$Lon  # longitude of the target site					
-lat <-	EffectSizes_biodiv_DATA1$Lat	# latitude  of the target site 	
+lon <- 	EffectSizes_biodiv_DATA1$Lon  # longitude of the target site
+lat <-	EffectSizes_biodiv_DATA1$Lat	# latitude  of the target site
 
 # Set start and end year of the biotic time series at the site:
 
@@ -170,7 +180,7 @@ summary(DataMeanT)
 ncinP <- nc_open("rr_0.25deg_reg_v17.0.nc" )
 t <- ncvar_get(ncinP,"time")
 tunits <- ncatt_get(ncinP,"time","units")
-obsoutput_P <- ncvar_get(ncinP, 
+obsoutput_P <- ncvar_get(ncinP,
                          start= c(which.min(abs(ncinP$dim$longitude$vals - lon)), # look for closest long
                                   which.min(abs(ncinP$dim$latitude$vals - lat)),  # look for closest lat
                                   1),
@@ -216,59 +226,59 @@ Trend.TMean <- My.mmkh(Climatic_data$T_AnnualMean) #Modified Mann-Kendall Test F
 # Water_temperature <- read.table("WaterT_Site1.csv",h=T, sep=";") # change file name according to the time series to be analyzed
 # then, run the 4 rows of the code above to compute the trend of TMean using "Water_temperature" instead of "Climatic_data"
 
-# Combine results in a data frame: 
+# Combine results in a data frame:
 
 EffectSizes_climate_Site1 <- data.frame(Site = "RMO",
-                                        TMean_S = Trend.TMean[10], 
+                                        TMean_S = Trend.TMean[10],
                                         TMean_var = Trend.TMean[8], # if there is no temporal autocorrelation choose: [8]; if there is temporal autocorrelation choose [9]
-                                        PTot_S = Trend.PTot[10], 
+                                        PTot_S = Trend.PTot[10],
                                         PTot_var = Trend.PTot[8])  # if there is no temporal autocorrelation choose: [8]; if there is temporal autocorrelation choose [9]
 
 
 
 # Merge biotic and climatic trends:
 
-Effect_size_bio_climate <- merge(EffectSizes_biodiv_DATA1, EffectSizes_climate_Site1, by = "Site")                                               
+Effect_size_bio_climate <- merge(EffectSizes_biodiv_DATA1, EffectSizes_climate_Site1, by = "Site")
 
-# If replicated time series were combined, run this following line instead of the previous one: 
-# Effect_size_bio_climate <- merge(EffectSizes_biodiv_Combined_DATA1_3, EffectSizes_climate_Site1, by = "Site")                                               
+# If replicated time series were combined, run this following line instead of the previous one:
+# Effect_size_bio_climate <- merge(EffectSizes_biodiv_Combined_DATA1_3, EffectSizes_climate_Site1, by = "Site")
 
 
 # (6) Gather site´s biogeoregion ------------------------------------------------------------
 
-# For continental sites: 
+# For continental sites:
 # To run this code it is necessary to download the Biogeoregion shapefile from:
 # https://www.eea.europa.eu/data-and-maps/data/biogeographical-regions-europe-3#tab-gis-data
 
-# Set projections: 
+# Set projections:
 crs.geo <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84")  # geographical, datum WGS84
 crs.laea <- CRS("+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs")  # Lambert Azimuthal Equal Area
 
 # Read shapefile and define projection:
 shapeER <- readOGR(dsn = ".", layer = "BiogeoRegions2016")
-proj4string(shapeER) <- crs.laea 
+proj4string(shapeER) <- crs.laea
 
-# Define projection of the target site and re-project as laea: 
+# Define projection of the target site and re-project as laea:
 Site <- Effect_size_bio_climate
-coordinates(Site) <- c("Lon", "Lat") 
-proj4string(Site) <- crs.geo 
+coordinates(Site) <- c("Lon", "Lat")
+proj4string(Site) <- crs.geo
 Site.laea <- spTransform(Site, crs.laea)  # spTransform makes the projection
 
 # Extract Biogeoregion
 Region <- extract(shapeER, Site.laea)$code
 
-# For marine sites: 
+# For marine sites:
 # To run this code it is necessary to download the marine ecoregion shapefile from:
 # http://maps.tnc.org/gis_data.html
 
 # Read shapefile and define projection:
 MARshape <- readOGR(dsn = ".", layer = "meow_ecos")
-proj4string(MARshape) <- crs.geo 
+proj4string(MARshape) <- crs.geo
 
 # Define projection of the target site and re-project as laea:
 Site <- Effect_size_bio_climate
-coordinates(Site) <- c("Lon", "Lat") 
-proj4string(Site) <- crs.geo 
+coordinates(Site) <- c("Lon", "Lat")
+proj4string(Site) <- crs.geo
 
 # Extract Biogeoregion
 Region <- extract(MARshape, Site)$ECOREGION
