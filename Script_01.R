@@ -18,7 +18,6 @@
 ########################################################################################################################################################################
 
 # Load libraries:
-
 library(vegan)
 library(codyn)
 library(reshape2)
@@ -31,7 +30,7 @@ library(rgdal)
 library(readxl)
 library(tidyverse)
 source("functions/My_mmkh.R", local=T) # see function folder
-
+library(rvest)
 
 ## Load the list of dataset and filter the birds
 data_url <- read_xlsx("data/41467_2020_17171_MOESM4_ESM.xlsx")
@@ -39,8 +38,6 @@ data_url <- data_url[data_url$`Taxonomic group` == "Birds",]
 
 ## Extract the dataset:
 
-
-# Read data:
 
 DATA1_list <- read.table("BioData1.csv", h=T, sep=";") # change file name according to the time series to be analyzed
 
