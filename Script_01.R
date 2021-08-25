@@ -37,6 +37,19 @@ data_url <- read_xlsx("data/41467_2020_17171_MOESM4_ESM.xlsx")
 data_url <- data_url[data_url$`Taxonomic group` == "Birds",]
 
 ## Extract the dataset:
+phantom_dir <- "C:/phantomjs-2.1.1-windows/"
+bird_url <- data_url$`Link to the data`[1]
+
+# use system2 to invoke phantomjs via it's executable
+system2("C:/phantomjs-2.1.1-windows/bin/phantomjs.exe",
+        #provide the path to the scraping script and the country url as argument
+        args = c(file.path(phantom_dir, "webscrapping.js"), bird_url))
+
+# read in the saved html file
+page <- read_html("elopage.html")
+
+page %>% 
+  html_nodes("a")
 
 
 DATA1_list <- read.table("BioData1.csv", h=T, sep=";") # change file name according to the time series to be analyzed
