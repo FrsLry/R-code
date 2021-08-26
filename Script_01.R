@@ -16,7 +16,7 @@
 # Site = site name, TimeSeries_id = unique identifier for the time series, Year = survey year, Taxon = taxon name, Density = total density or biomass or number of individual of that taxon for that year.
 #
 ########################################################################################################################################################################
-
+rm(list = ls())
 # Load libraries:
 library(vegan)
 library(codyn)
@@ -32,12 +32,13 @@ library(tidyverse)
 source("functions/My_mmkh.R", local=T) # see function folder
 library(rvest)
 
-## Load the list of dataset and filter the birds
-data_url <- read_xlsx("data/41467_2020_17171_MOESM4_ESM.xlsx")
-data_url <- data_url[data_url$`Taxonomic group` == "Birds",]
+## Load the bird datasets
+load("data/modified_data.Rdata")
 
 
-DATA1_list <- read.table("BioData1.csv", h=T, sep=";") # change file name according to the time series to be analyzed
+
+# DATA1_list <- read.table("BioData1.csv", h=T, sep=";") 
+DATA1_list <- get(ls()[grepl("^S0", ls())][1]) # change file name according to the time series to be analyzed
 
 
 # (1) Compute biodiversity metrics -----------------------------------------------------------------
@@ -88,7 +89,7 @@ pacf(DATA1.Turnover, na.action = na.pass) # check if there is temporal autocorre
 DATA1.trend.Turnover <- My.mmkh(DATA1$Turnover[-1]) # Modified Mann-Kendall Test For Serially Correlated Data Using Hamed and Rao (1998) Variance Correction Approach
 
 # Combine results in a data frame:
-
+# "*_S" correspond to the value of the S-statistic (i.e. the trend) and "*_var" to its variance
 EffectSizes_biodiv_DATA1 <- data.frame(TimeSeries = "DATA1", Site = "RMO", Country = "DE", Lat = 50.187,	Lon = 9.100,	Alt = 122, # fill in with site information
                               TaxonomicGroup = "AquaticInv", Realm = "FW", Naturalness = 3, startYear = start.year, endYear = end.year,    # fill in with site information
                               NTaxa_S = DATA1.trend.NTaxa[10],
