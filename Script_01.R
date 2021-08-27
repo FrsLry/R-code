@@ -38,8 +38,13 @@ load("data/modified_data.Rdata")
 # DATA1_list <- read.table("BioData1.csv", h=T, sep=";") 
 DATA1_list <- get(ls()[grepl("^S0", ls())][3]) # change file name according to the time series to be analyzed
 
-# DATA1_list <- DATA1_list[-4,] ## For S012
-# DATA1_list <- DATA1_list[355,] ## For S011
+rownames(DATA1_list) <- NULL ## For S011
+# DATA1_list <- DATA1_list[-(361),] ## For S011
+# DATA1_list$Density[360] <- 4+1
+# DATA1_list <- DATA1_list[-(247),] ## For S011
+# DATA1_list$Density[245] <- (316+170) ## For S011
+DATA1_list <- DATA1_list[-4,] ## For S012
+
 # (1) Compute biodiversity metrics -----------------------------------------------------------------
 
 DATA1 <- dcast(DATA1_list, Year ~ Taxon, sum, value.var = "Density") # create cross table
@@ -54,8 +59,8 @@ DATA1_Turnover <- turnover(DATA1_list, time.var = "Year", species.var = "Taxon",
 # DATA1$Turnover <- c(0, DATA1_Turnover$total) # Turnover
 DATA1 <-
 DATA1 %>% 
-  left_join(rbind(c(0, min(DATA1_Turnover$Year)-1), DATA1_Turnover), by = "Year") # Turnover
-
+  left_join(rbind(c(0, min(DATA1_list$Year)), DATA1_Turnover), by = "Year") %>%  # Turnover
+  rename(Turnover = total)
 # Prepare data for next steps:
 
 start.year <- min(DATA1$Year) # set the starting year of the time series
@@ -102,6 +107,11 @@ EffectSizes_biodiv_DATA1 <- data.frame(TimeSeries = "DATA4", Site = "RMO", Count
                               Simp_var = DATA1.trend.Simp[9],  # if there is no temporal autocorrelation choose: [8]; if there is temporal autocorrelation choose [9]
                               Turn_S = DATA1.trend.Turnover[10],
                               Turn_var = DATA1.trend.Turnover[8])  # if there is no temporal autocorrelation choose: [8]; if there is temporal autocorrelation choose [9]
+
+
+## To determine the temporal grain 
+# DATA1_list %>% select(Year) %>% distinct() %>%  mutate(Year = floor(Year)) %>% count(Year)
+
 
 
 # (3) Combine replicated time series [to be run only when necessary] ---------------------------------------
