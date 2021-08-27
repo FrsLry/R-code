@@ -35,12 +35,11 @@ library(rvest)
 ## Load the bird datasets
 load("data/modified_data.Rdata")
 
-
-
 # DATA1_list <- read.table("BioData1.csv", h=T, sep=";") 
-DATA1_list <- get(ls()[grepl("^S0", ls())][1]) # change file name according to the time series to be analyzed
+DATA1_list <- get(ls()[grepl("^S0", ls())][3]) # change file name according to the time series to be analyzed
 
-
+# DATA1_list <- DATA1_list[-4,] ## For S012
+# DATA1_list <- DATA1_list[355,] ## For S011
 # (1) Compute biodiversity metrics -----------------------------------------------------------------
 
 DATA1 <- dcast(DATA1_list, Year ~ Taxon, sum, value.var = "Density") # create cross table
@@ -52,7 +51,10 @@ DATA1$NTaxa <- specnumber(DATA1_Taxa)  # taxonomic richness
 DATA1$Simp <- diversity(DATA1_Taxa, index = "simpson") # Simpson´s taxonomic diversity
 DATA1$Abund <- rowSums (DATA1_Taxa) # Total abundance
 DATA1_Turnover <- turnover(DATA1_list, time.var = "Year", species.var = "Taxon", abundance.var = "Density" , metric = "total")
-DATA1$Turnover <- c(0, DATA1_Turnover$total) # Turnover
+# DATA1$Turnover <- c(0, DATA1_Turnover$total) # Turnover
+DATA1 <-
+DATA1 %>% 
+  left_join(rbind(c(0, min(DATA1_Turnover$Year)-1), DATA1_Turnover), by = "Year") # Turnover
 
 # Prepare data for next steps:
 
@@ -90,7 +92,7 @@ DATA1.trend.Turnover <- My.mmkh(DATA1$Turnover[-1]) # Modified Mann-Kendall Test
 
 # Combine results in a data frame:
 # "*_S" correspond to the value of the S-statistic (i.e. the trend) and "*_var" to its variance
-EffectSizes_biodiv_DATA1 <- data.frame(TimeSeries = "DATA1", Site = "RMO", Country = "DE", Lat = 50.187,	Lon = 9.100,	Alt = 122, # fill in with site information
+EffectSizes_biodiv_DATA1 <- data.frame(TimeSeries = "DATA4", Site = "RMO", Country = "DE", Lat = 50.187,	Lon = 9.100,	Alt = 122, # fill in with site information
                               TaxonomicGroup = "AquaticInv", Realm = "FW", Naturalness = 3, startYear = start.year, endYear = end.year,    # fill in with site information
                               NTaxa_S = DATA1.trend.NTaxa[10],
                               NTaxa_var = DATA1.trend.NTaxa[8], # if there is no temporal autocorrelation choose: [8]; if there is temporal autocorrelation choose [9]
