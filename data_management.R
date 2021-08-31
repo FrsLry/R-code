@@ -2,6 +2,9 @@
 rm(list = ls())
 library(readxl)
 library(stringr)
+library(dplyr)
+library(janitor)
+source("functions/addNArow.R", local=T)
 
 ####### S004 #####
 S004 <- read_xlsx("data/bird_data/S004.xlsx", sheet = 1, skip = 2)
@@ -17,12 +20,13 @@ data.frame(Site = S004$Site,
 ### S011-S019 #####
 id <- c(14, 15, 16, 17, 12, 18, 19, 11, 13)
 
-
+## Load the different sheets
 for(i in id){
   assign(paste0("S", 0, i),
          read_xlsx("data/bird_data/S011-S019.xlsx", sheet = which(i == id)+1, skip = 2))
 }
 
+## When no data for a year, create a row with the Year + NAs
 for(i in id){
   
   tmp_data <- get(paste0("S0", i))
@@ -64,6 +68,46 @@ for(i in id){
     
   }
 }
+
+
+
+### S047 #####
+S047 <- read_excel("data/bird_data/S047.xlsx", sheet = 1, skip = 2)
+
+## Fixing date format problem
+S047[1:97, 2] <-
+  as.numeric(format(convert_to_date(S047$`Sampling date`[1:97], character_fun = lubridate::my),
+                                   format = '%Y'))
+
+
+## Now format the final dataset
+S047 <- 
+data.frame(Site = S047$Site, 
+           TimeSeries_id = "S047",
+           Year = S047$`Sampling date`,
+           Taxon = S047$Taxon,
+           Density = S047$`Abundance (nest = breeding female)`)
+
+S047 <- addNArow(S047)
+
+### S074: not usable because only abundance data of 2 species ####
+
+### S076 #####
+S076 <- read_xlsx("data/bird_data/S076.xlsx", sheet = 1, skip = 3)
+
+## Format the data into a long version
+S076 <-
+S076 %>% 
+  select(-TOTAL) %>% 
+  filter(YEAR != "TOTAL") %>% 
+  pivot_longer(2:101, names_to = "Taxon", values_to = "Density") %>% 
+  mutate(Year = as.numeric(YEAR),
+         TimeSeries_id = "S076",
+         Site = "LTSER Zone Atelier Pyrénées Garonne - France") %>% 
+  select(-YEAR)
+
+
+S076 <- addNArow(S076)
 
 # Save everything in one file ####
 save.image(file = "data/modified_data.Rdata")
