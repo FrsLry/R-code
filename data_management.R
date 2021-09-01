@@ -4,6 +4,8 @@ library(readxl)
 library(stringr)
 library(dplyr)
 library(janitor)
+library(lubridate)
+library(zoo)
 source("functions/addNArow.R", local=T)
 
 ####### S004 #####
@@ -108,6 +110,100 @@ S076 %>%
 
 
 S076 <- addNArow(S076)
+
+
+### S078 ##### Too messy, I quit
+# Here, we have 4 different transect, so we need to combine those replicated times series
+# S078 <- read_xlsx("data/bird_data/S078.xlsx", skip = 3)
+# 
+# 
+# ## Transect SE
+# S078_SE <-
+#   S078 %>% 
+#   filter(Transect == "SE")
+# 
+# ## Mismatch between the column Date and Year (2005 and 2001)
+# S078_SE[1:148, 2] <- 2005
+# 
+# ## Count abundance per species per year
+# S078_SE <-
+#   S078_SE %>% 
+#     select(Year, Sp_code) %>%
+#     group_by(Year) %>% 
+#     count(Sp_code)
+# 
+# S078_SE <-
+#   data.frame(
+#     Site = "Ramat Hanadiv (RHD) - Israel - SE",
+#     TimeSeries_id = "S078_SE",
+#     Year = S078_SE$Year,
+#     Taxon = S078_SE$Sp_code,
+#     Density = S078_SE$n)
+# 
+# ## Add NA for missing years
+# S078_SE <- addNArow(S078_SE)
+# 
+# ## Transect UK
+# S078_UK <- S078 %>% filter(Transect == "UK")
+# 
+# ## Once again, mismatch between Date and Year
+# S078_UK <-
+# S078_UK %>% filter(Year == 2001) %>% mutate(Date = as.numeric(Date)) %>% 
+#   filter(is.na(Date) == F) %>% 
+#   mutate(Date = convert_to_date(Date, format = lubridate::mdy)) %>% 
+#   mutate(Year = format(Date, format = "%Y")) %>% 
+#   select(-Date) %>% 
+#   mutate(Year = as.numeric(Year)) %>% 
+#   rbind(S078_UK %>% filter(Date == "5/25/01") %>% select(-Date)) %>% 
+#   rbind(S078_UK %>% filter(Year == 2007) %>% select(-Date)) %>% 
+#   select(Year, Sp_code) %>% 
+#   group_by(Year) %>% count(Sp_code)
+# 
+# S078_UK <-
+# data.frame(
+#   Site = "Ramat Hanadiv (RHD) - Israel - UK",
+#   TimeSeries_id = "S078_UK",
+#   Year = S078_UK$Year,
+#   Taxon = S078_UK$Sp_code,
+#   Density = S078_UK$n)
+# 
+# S078_UK <- addNArow(S078_UK)
+# 
+# 
+# ## Transect SW
+# S078_SW <- S078 %>% filter(Transect == "SW")
+
+
+### S094 #####
+S094 <- read_xlsx("data/bird_data/S094.xlsx", sheet = 2)
+
+S094 <-
+S094 %>% 
+  mutate(`Sampling date` = decimal_date(S094$`Sampling date`))
+
+
+
+S094 <- 
+data.frame(
+  Site = "LTSER Dutch Wadden Sea Area - Netherlands", 
+  TimeSeries_id = "S094",
+  Year = as.numeric(S094$`Sampling date`),
+  Taxon = S094$Taxon,
+  Density = S094$`density (ind/km2)`
+)
+
+
+## S095 #####
+S095 <- read_xlsx("data/bird_data/S095.xlsx", sheet = 1, skip = 2)
+
+S095 <-
+  data.frame(
+    Site = "LTSER Veluwe - Netherlands", 
+    TimeSeries_id = "S095",
+    Year = as.numeric(S095$`Sampling date`),
+    Taxon = S095$Taxon,
+    Density = S095$`Density (ind/m2)`)
+
 
 # Save everything in one file ####
 save.image(file = "data/modified_data.Rdata")

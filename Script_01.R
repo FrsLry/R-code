@@ -36,7 +36,7 @@ library(rvest)
 load("data/modified_data.Rdata")
 
 # DATA1_list <- read.table("BioData1.csv", h=T, sep=";") 
-DATA1_list <- get(ls()[grepl("^S0", ls())][12]) # change file name according to the time series to be analyzed
+DATA1_list <- get(ls()[grepl("^S0", ls())][14]) # change file name according to the time series to be analyzed
 
 # rownames(DATA1_list) <- NULL ## For S011
 # DATA1_list <- DATA1_list[-(361),] ## For S011
@@ -110,7 +110,7 @@ EffectSizes_biodiv_DATA1 <- data.frame(TimeSeries = "DATA4", Site = "RMO", Count
 
 
 ## To determine the temporal grain 
-# DATA1_list %>% select(Year) %>% distinct() %>%  mutate(Year = floor(Year)) %>% count(Year)
+DATA1_list %>% select(Year) %>% distinct() %>%  mutate(Year = floor(Year)) %>% count(Year)
 
 
 
